@@ -325,8 +325,11 @@ def build_eager_tf_policy(name,
 
             if self.dist_class:
                 action_dist = self.dist_class(model_out, self.model)
-                action = action_dist.sample()
-                logp = action_dist.sampled_action_logp()
+                if "remote_on_policy_action" in kwargs:
+                  action = kwargs["remote_on_policy_action"]
+                else:
+                  action = action_dist.sample()
+                logp = action_dist.logp(action)
             else:
                 action, logp = action_sampler_fn(
                     self, self.model, input_dict, self.observation_space,

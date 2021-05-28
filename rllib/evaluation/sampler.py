@@ -323,8 +323,14 @@ def _env_runner(base_env, extra_batch_callback, policies, policy_mapping_fn,
 
         # Do batched policy eval
         t2 = time.time()
+        policyEvalArgs = {}
+        if off_policy_actions:
+          actionSpaceSize = base_env.action_space.shape[0]
+          eid = list(off_policy_actions.keys())[0]
+          policyEvalArgs["remote_on_policy_action"]\
+              = off_policy_actions[eid]["agent0"].reshape(1, actionSpaceSize)
         eval_results = _do_policy_eval(tf_sess, to_eval, policies,
-                                       active_episodes)
+            active_episodes, **policyEvalArgs)
         perf_stats.inference_time += time.time() - t2
 
         # Process results and update episode state
@@ -508,7 +514,7 @@ def _process_observations(base_env, policies, batch_builder_pool,
     return active_envs, to_eval, outputs
 
 
-def _do_policy_eval(tf_sess, to_eval, policies, active_episodes):
+def _do_policy_eval(tf_sess, to_eval, policies, active_episodes, **kwargs):
     """Call compute actions on observation batches to get next actions.
 
     Returns:
@@ -545,7 +551,8 @@ def _do_policy_eval(tf_sess, to_eval, policies, active_episodes):
                 prev_action_batch=[t.prev_action for t in eval_data],
                 prev_reward_batch=[t.prev_reward for t in eval_data],
                 info_batch=[t.info for t in eval_data],
-                episodes=[active_episodes[t.env_id] for t in eval_data])
+                episodes=[active_episodes[t.env_id] for t in eval_data],
+                **kwargs)
     if builder:
         for k, v in pending_fetches.items():
             eval_results[k] = builder.get(v)
